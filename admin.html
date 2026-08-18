@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Panel de Admin · Obsidiana Burgers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!--
+  ADMIN DE OBSIDIANA BURGERS
+  ==========================
+  Este panel necesita un proyecto de Supabase conectado para funcionar.
+  Mirá el archivo supabase-schema.sql (instrucciones al principio) y
+  ADMIN-SETUP.md para los pasos completos.
+
+  Una vez que tengas el proyecto creado, pegá tu URL y tu "anon public key"
+  acá abajo, en el bloque CONFIGURACIÓN DE SUPABASE (buscá SUPABASE_URL).
+  Mientras esos valores sigan como están (con "PEGAR-ACA"), el panel te va
+  a mostrar una pantalla explicando que falta conectarlo — no hace falta
+  que subas esto a GitHub recién ahora, podés hacerlo cuando quieras.
+-->
+<style>
+  :root{
+    --black:#0a0a0a; --black-2:#131313; --black-3:#1c1c1c; --black-4:#262626;
+    --gold:#d4af37; --gold-light:#f2d888; --gold-dark:#a9821c;
+    --white:#f6f4ee; --gray:#a6a29a; --radius:14px;
+    --shadow-gold: 0 10px 30px rgba(212,175,55,.18);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Poppins',sans-serif; background:var(--black); color:var(--white);
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{font-family:'Playfair Display',serif;}
+  button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit;}
+  input, select, textarea{font-family:inherit;}
+  a{color:inherit;}
+
+  /* ---------- Pantalla "falta conectar" ---------- */
+  .setup-screen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .setup-card{
+    max-width:560px; background:var(--black-2); border:1px solid rgba(212,175,55,.25);
+    border-radius:var(--radius); padding:40px; text-align:center;
+  }
+  .setup-card .icon{font-size:2.4rem; margin-bottom:14px;}
+  .setup-card h1{font-size:1.5rem; margin-bottom:14px; color:var(--gold);}
+  .setup-card p{color:var(--gray); font-size:.92rem; line-height:1.6; margin-bottom:10px; text-align:left;}
+  .setup-card code{
+    background:var(--black-3); border:1px solid rgba(212,175,55,.2); border-radius:6px;
+    padding:2px 7px; font-size:.85rem; color:var(--gold-light);
+  }
+  .setup-card ol{text-align:left; color:var(--gray); font-size:.92rem; line-height:1.8; margin:14px 0 0 20px;}
+
+  /* ---------- Login ---------- */
+  .login-screen{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;}
+  .login-card{
+    width:100%; max-width:380px; background:var(--black-2); border:1px solid rgba(212,175,55,.25);
+    border-radius:var(--radius); padding:36px 32px;
+  }
+  .login-card h1{font-size:1.3rem; text-align:center; margin-bottom:4px;}
+  .login-card .sub{text-align:center; color:var(--gray); font-size:.82rem; margin-bottom:26px;}
+  .field{display:block; margin-bottom:16px;}
+  .field > span{display:block; font-size:.7rem; letter-spacing:.05em; text-transform:uppercase; color:var(--gray); margin-bottom:6px;}
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--black-3); border:1px solid rgba(212,175,55,.22); border-radius:10px;
+    padding:12px 14px; color:var(--white); font-size:.9rem; resize:vertical;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--gold);}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:13px 24px; border-radius:999px; font-weight:700; font-size:.88rem;
+    transition:transform .2s ease, box-shadow .2s ease, background .2s ease; white-space:nowrap;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg, var(--gold-light), var(--gold) 55%, var(--gold-dark));
+    color:#171208; box-shadow:var(--shadow-gold);
+  }
+  .btn-primary:hover{transform:translateY(-2px);}
+  .btn-outline{background:transparent; color:var(--gold); border:1.5px solid var(--gold);}
+  .btn-outline:hover{background:rgba(212,175,55,.1);}
+  .btn-danger{background:rgba(224,86,61,.15); color:#e0563d; border:1px solid rgba(224,86,61,.4);}
+  .btn-danger:hover{background:rgba(224,86,61,.25);}
+  .btn-block{width:100%;}
+  .btn-sm{padding:8px 16px; font-size:.78rem;}
+  .error-msg{color:#e0563d; font-size:.8rem; margin-top:10px; text-align:center; min-height:1em;}
+
+  /* ---------- Layout del panel ---------- */
+  .admin-shell{display:none; min-height:100vh; grid-template-columns:220px 1fr;}
+  .admin-shell.show{display:grid;}
+  .admin-sidebar{
+    background:var(--black-2); border-right:1px solid rgba(212,175,55,.15);
+    padding:26px 18px; display:flex; flex-direction:column; gap:6px;
+  }
+  .admin-brand{display:flex; align-items:center; gap:10px; margin-bottom:26px; padding:0 6px;}
+  .admin-brand .dot{width:10px; height:10px; border-radius:50%; background:var(--gold);}
+  .admin-brand span{font-family:'Playfair Display',serif; font-weight:800; font-size:1.05rem;}
+  .nav-item{
+    display:flex; align-items:center; gap:10px; padding:11px 14px; border-radius:10px;
+    color:var(--gray); font-size:.88rem; font-weight:600; text-align:left;
+  }
+  .nav-item:hover{background:rgba(212,175,55,.07); color:var(--white);}
+  .nav-item.active{background:rgba(212,175,55,.14); color:var(--gold);}
+  .admin-sidebar .spacer{flex:1;}
+  .admin-main{padding:32px 40px; overflow-y:auto; max-height:100vh;}
+  .admin-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:12px;}
+  .admin-header h2{font-size:1.5rem;}
+  .admin-header p{color:var(--gray); font-size:.85rem; margin-top:4px;}
+  .panel{display:none;}
+  .panel.show{display:block;}
+
+  /* ---------- Tablas de productos / pedidos ---------- */
+  .section-block{margin-bottom:34px;}
+  .section-block h3{font-size:1.05rem; color:var(--gold); margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;}
+  .prod-table{width:100%; border-collapse:collapse; background:var(--black-2); border-radius:var(--radius); overflow:hidden;}
+  .prod-table th{
+    text-align:left; font-size:.68rem; letter-spacing:.05em; text-transform:uppercase; color:var(--gray);
+    padding:12px 16px; border-bottom:1px solid rgba(212,175,55,.15); font-weight:600;
+  }
+  .prod-table td{padding:12px 16px; border-bottom:1px solid rgba(212,175,55,.08); font-size:.86rem; vertical-align:middle;}
+  .prod-table tr:last-child td{border-bottom:none;}
+  .prod-table .muted{color:var(--gray); font-size:.78rem;}
+  .badge{
+    display:inline-block; padding:3px 10px; border-radius:999px; font-size:.68rem; font-weight:700;
+    text-transform:uppercase; letter-spacing:.03em;
+  }
+  .badge.active{background:rgba(61,220,91,.12); color:#7be08a;}
+  .badge.inactive{background:rgba(224,86,61,.12); color:#e0563d;}
+  .row-actions{display:flex; gap:8px; justify-content:flex-end;}
+  .icon-action{
+    width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    color:var(--gray); border:1px solid rgba(212,175,55,.2);
+  }
+  .icon-action:hover{color:var(--gold); border-color:var(--gold);}
+  .empty-row td{text-align:center; color:var(--gray); padding:26px; font-size:.86rem;}
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.65); display:none;
+    align-items:center; justify-content:center; z-index:400; padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-card{
+    width:100%; max-width:480px; max-height:90vh; overflow-y:auto;
+    background:var(--black-2); border:1px solid rgba(212,175,55,.3); border-radius:var(--radius); padding:28px;
+  }
+  .modal-card h3{font-size:1.15rem; margin-bottom:20px;}
+  .modal-actions{display:flex; gap:12px; margin-top:6px;}
+  .checkbox-row{display:flex; align-items:center; gap:8px; margin-bottom:16px;}
+  .checkbox-row input{width:16px; height:16px;}
+  .checkbox-row span{font-size:.85rem; color:var(--white); text-transform:none; letter-spacing:0;}
+  .two-col{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+
+  /* ---------- Config panel ---------- */
+  .config-form{max-width:480px;}
+  .save-toast{
+    position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--gold); color:#171208; padding:12px 22px; border-radius:999px; font-weight:700; font-size:.85rem;
+    opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease; z-index:500;
+  }
+  .save-toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  @media (max-width:820px){
+    .admin-shell.show{grid-template-columns:1fr;}
+    .admin-sidebar{
+      flex-direction:row; overflow-x:auto; padding:14px 16px; gap:8px; align-items:center;
+    }
+    .admin-brand{display:none;}
+    .nav-item{white-space:nowrap;}
+    .admin-sidebar .spacer{display:none;}
+    .admin-main{padding:22px 18px;}
+    .two-col{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== CONFIGURACIÓN DE SUPABASE ===================== -->
+<!-- Reemplazá estos dos valores por los de TU proyecto de Supabase.
+     Los sacás en: Project Settings → API → "Project URL" y "anon public key".
+     Mientras digan "PEGAR-ACA", el panel muestra la pantalla de instrucciones. -->
+<script>
+  const SUPABASE_URL = 'PEGAR-ACA-TU-PROJECT-URL';
+  const SUPABASE_ANON_KEY = 'PEGAR-ACA-TU-ANON-KEY';
+</script>
+
+<!-- ===================== PANTALLA: FALTA CONECTAR ===================== -->
+<div class="setup-screen" id="setupScreen">
+  <div class="setup-card">
+    <div class="icon">🔌</div>
+    <h1>Todavía no conectaste Supabase</h1>
+    <p>Este panel de admin necesita un proyecto de Supabase para guardar el menú, el horario y los pedidos.</p>
+    <ol>
+      <li>Creá un proyecto gratis en <strong>supabase.com</strong>.</li>
+      <li>Abrí el archivo <code>supabase-schema.sql</code> de esta carpeta, pegalo en el "SQL Editor" de tu proyecto y ejecutalo.</li>
+      <li>En "Authentication → Users" creá tu usuario de admin (email y contraseña).</li>
+      <li>En "Project Settings → API" copiá el <code>Project URL</code> y la <code>anon public key</code>.</li>
+      <li>Pegalos en este archivo (<code>admin.html</code>), al principio, donde dice <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code>.</li>
+    </ol>
+    <p style="margin-top:16px;">Los pasos completos están en <code>ADMIN-SETUP.md</code>.</p>
+  </div>
+</div>
+
+<!-- ===================== LOGIN ===================== -->
+<div class="login-screen" id="loginScreen" style="display:none;">
+  <div class="login-card">
+    <h1>Panel de Admin</h1>
+    <p class="sub">Obsidiana Burgers</p>
+    <label class="field">
+      <span>Email</span>
+      <input type="email" id="loginEmail" placeholder="vos@ejemplo.com" autocomplete="username">
+    </label>
+    <label class="field">
+      <span>Contraseña</span>
+      <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+    </label>
+    <button class="btn btn-primary btn-block" id="loginBtn" type="button">Ingresar</button>
+    <p class="error-msg" id="loginError"></p>
+  </div>
+</div>
+
+<!-- ===================== PANEL ===================== -->
+<div class="admin-shell" id="adminShell">
+  <aside class="admin-sidebar">
+    <div class="admin-brand"><span class="dot"></span><span>Obsidiana Admin</span></div>
+    <button class="nav-item active" data-panel="panelProductos" type="button">Productos</button>
+    <button class="nav-item" data-panel="panelPedidos" type="button">Pedidos</button>
+    <button class="nav-item" data-panel="panelConfig" type="button">Horario y contacto</button>
+    <div class="spacer"></div>
+    <button class="nav-item" id="logoutBtn" type="button">Cerrar sesión</button>
+  </aside>
+
+  <main class="admin-main">
+    <!-- ---------- PRODUCTOS ---------- -->
+    <section class="panel show" id="panelProductos">
+      <div class="admin-header">
+        <div>
+          <h2>Productos</h2>
+          <p>Hamburguesas, combos y bebidas del menú.</p>
+        </div>
+        <button class="btn btn-primary" id="newProductBtn" type="button">+ Nuevo producto</button>
+      </div>
+
+      <div class="section-block">
+        <h3>Hamburguesas</h3>
+        <table class="prod-table"><thead><tr>
+          <th>Nombre</th><th>Precio</th><th>Destacada</th><th>Estado</th><th></th>
+        </tr></thead><tbody id="tbodyBurger"></tbody></table>
+      </div>
+      <div class="section-block">
+        <h3>Combos</h3>
+        <table class="prod-table"><thead><tr>
+          <th>Nombre</th><th>Precio</th><th>Destacado</th><th>Estado</th><th></th>
+        </tr></thead><tbody id="tbodyCombo"></tbody></table>
+      </div>
+      <div class="section-block">
+        <h3>Bebidas</h3>
+        <table class="prod-table"><thead><tr>
+          <th>Nombre</th><th>Precio</th><th>Destacada</th><th>Estado</th><th></th>
+        </tr></thead><tbody id="tbodyDrink"></tbody></table>
+      </div>
+    </section>
+
+    <!-- ---------- PEDIDOS ---------- -->
+    <section class="panel" id="panelPedidos">
+      <div class="admin-header">
+        <div>
+          <h2>Pedidos</h2>
+          <p>Se van a ir sumando acá a medida que los clientes confirmen su pedido por WhatsApp.</p>
+        </div>
+        <button class="btn btn-outline btn-sm" id="refreshOrdersBtn" type="button">Actualizar</button>
+      </div>
+      <table class="prod-table"><thead><tr>
+        <th>Fecha</th><th>Cliente</th><th>Entrega</th><th>Total</th><th>Estado</th><th></th>
+      </tr></thead><tbody id="tbodyOrders"></tbody></table>
+    </section>
+
+    <!-- ---------- CONFIG ---------- -->
+    <section class="panel" id="panelConfig">
+      <div class="admin-header">
+        <div>
+          <h2>Horario y contacto</h2>
+          <p>Esto controla el cartelito Abierto/Cerrado y los enlaces de contacto del sitio.</p>
+        </div>
+      </div>
+      <div class="config-form">
+        <div class="two-col">
+          <label class="field">
+            <span>Hora de apertura</span>
+            <input type="time" id="cfgOpen">
+          </label>
+          <label class="field">
+            <span>Hora de cierre</span>
+            <input type="time" id="cfgClose">
+          </label>
+        </div>
+        <label class="field">
+          <span>Número de WhatsApp (con código de país, sin +)</span>
+          <input type="text" id="cfgWhatsapp" placeholder="Ej: 5492657392878">
+        </label>
+        <label class="field">
+          <span>Link de Instagram</span>
+          <input type="text" id="cfgInstagram" placeholder="https://instagram.com/tu_usuario">
+        </label>
+        <button class="btn btn-primary" id="saveConfigBtn" type="button">Guardar cambios</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ===================== MODAL: NUEVO / EDITAR PRODUCTO ===================== -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal-card">
+    <h3 id="modalTitle">Nuevo producto</h3>
+    <input type="hidden" id="prodId">
+    <label class="field">
+      <span>Categoría</span>
+      <select id="prodCategory">
+        <option value="burger">Hamburguesa</option>
+        <option value="combo">Combo</option>
+        <option value="drink">Bebida</option>
+      </select>
+    </label>
+    <label class="field">
+      <span>Nombre</span>
+      <input type="text" id="prodName" placeholder="Ej: Classic Onix">
+    </label>
+    <label class="field">
+      <span>Descripción</span>
+      <textarea id="prodDesc" rows="2" placeholder="Ej: Carne 180g, cheddar, lechuga..."></textarea>
+    </label>
+    <div class="two-col">
+      <label class="field">
+        <span>Precio (AR$)</span>
+        <input type="number" id="prodPrice" min="0" step="50">
+      </label>
+      <label class="field">
+        <span>Etiqueta</span>
+        <input type="text" id="prodTag" placeholder="Ej: Clásica">
+      </label>
+    </div>
+    <label class="field">
+      <span>Nombre del archivo de foto</span>
+      <input type="text" id="prodImage" placeholder="Ej: burger-classic-onix.jpg">
+    </label>
+    <div class="checkbox-row">
+      <input type="checkbox" id="prodFeatured">
+      <span>Mostrar en el carrusel "Nuestras Estrellas" (solo hamburguesas)</span>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="prodActive" checked>
+      <span>Activo (visible en la web)</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" id="cancelModalBtn" type="button">Cancelar</button>
+      <button class="btn btn-primary btn-block" id="saveProductBtn" type="button">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="save-toast" id="saveToast">Guardado ✓</div>
+
+<script>
+/* ============================================================
+   Si todavía no se conectó Supabase, mostramos solo la pantalla
+   de instrucciones y no ejecutamos nada más.
+============================================================ */
+const SUPABASE_CONFIGURED = SUPABASE_URL !== 'PEGAR-ACA-TU-PROJECT-URL' && SUPABASE_ANON_KEY !== 'PEGAR-ACA-TU-ANON-KEY' && SUPABASE_URL && SUPABASE_ANON_KEY;
+
+if(!SUPABASE_CONFIGURED){
+  document.getElementById('setupScreen').style.display = 'flex';
+} else {
+  document.getElementById('setupScreen').style.display = 'none';
+  runAdminPanel();
+}
+
+function runAdminPanel(){
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const loginScreen = document.getElementById('loginScreen');
+  const adminShell = document.getElementById('adminShell');
+  const loginError = document.getElementById('loginError');
+
+  function fmt(n){ return 'AR$ ' + Number(n||0).toLocaleString('es-AR'); }
+  function toast(msg){
+    const t = document.getElementById('saveToast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=> t.classList.remove('show'), 2200);
+  }
+  function minutesToTime(mins){
+    mins = parseInt(mins, 10) || 0;
+    const h = Math.floor(mins/60).toString().padStart(2,'0');
+    const m = (mins%60).toString().padStart(2,'0');
+    return `${h}:${m}`;
+  }
+  function timeToMinutes(hhmm){
+    const [h,m] = (hhmm||'0:0').split(':').map(Number);
+    return h*60 + m;
+  }
+
+  /* ---------- SESIÓN ---------- */
+  async function checkSession(){
+    const { data:{ session } } = await sb.auth.getSession();
+    if(session){ showPanel(); } else { showLogin(); }
+  }
+  function showLogin(){
+    loginScreen.style.display = 'flex';
+    adminShell.classList.remove('show');
+  }
+  function showPanel(){
+    loginScreen.style.display = 'none';
+    adminShell.classList.add('show');
+    loadProducts();
+    loadOrders();
+    loadConfig();
+  }
+
+  document.getElementById('loginBtn').onclick = async ()=>{
+    loginError.textContent = '';
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){ loginError.textContent = 'Email o contraseña incorrectos.'; return; }
+    showPanel();
+  };
+  document.getElementById('loginPassword').addEventListener('keydown', e=>{
+    if(e.key === 'Enter') document.getElementById('loginBtn').click();
+  });
+  document.getElementById('logoutBtn').onclick = async ()=>{
+    await sb.auth.signOut();
+    showLogin();
+  };
+
+  /* ---------- NAVEGACIÓN DE TABS ---------- */
+  document.querySelectorAll('.nav-item[data-panel]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.nav-item[data-panel]').forEach(b=> b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.panel').forEach(p=> p.classList.remove('show'));
+      document.getElementById(btn.dataset.panel).classList.add('show');
+    });
+  });
+
+  /* ---------- PRODUCTOS ---------- */
+  let productsCache = [];
+
+  async function loadProducts(){
+    const { data, error } = await sb.from('products').select('*').order('sort_order', { ascending:true });
+    if(error){ console.error(error); return; }
+    productsCache = data || [];
+    renderProducts();
+  }
+
+  function renderProducts(){
+    const groups = { burger: document.getElementById('tbodyBurger'), combo: document.getElementById('tbodyCombo'), drink: document.getElementById('tbodyDrink') };
+    Object.values(groups).forEach(el=> el.innerHTML = '');
+    ['burger','combo','drink'].forEach(cat=>{
+      const items = productsCache.filter(p=> p.category === cat);
+      const el = groups[cat];
+      if(items.length === 0){
+        el.innerHTML = `<tr class="empty-row"><td colspan="5">Todavía no hay productos acá.</td></tr>`;
+        return;
+      }
+      el.innerHTML = items.map(p=> `
+        <tr>
+          <td><strong>${p.name}</strong><div class="muted">${p.description || ''}</div></td>
+          <td>${fmt(p.price)}</td>
+          <td>${p.featured ? '★' : '—'}</td>
+          <td><span class="badge ${p.active ? 'active' : 'inactive'}">${p.active ? 'Activo' : 'Pausado'}</span></td>
+          <td>
+            <div class="row-actions">
+              <button class="icon-action" data-edit="${p.id}" title="Editar" type="button">✎</button>
+              <button class="icon-action" data-del="${p.id}" title="Eliminar" type="button">✕</button>
+            </div>
+          </td>
+        </tr>`).join('');
+    });
+  }
+
+  document.getElementById('panelProductos').addEventListener('click', (e)=>{
+    const editBtn = e.target.closest('[data-edit]');
+    const delBtn = e.target.closest('[data-del]');
+    if(editBtn) openProductModal(productsCache.find(p=> p.id === editBtn.dataset.edit));
+    if(delBtn) deleteProduct(delBtn.dataset.del);
+  });
+
+  const productModal = document.getElementById('productModal');
+  function openProductModal(product){
+    document.getElementById('modalTitle').textContent = product ? 'Editar producto' : 'Nuevo producto';
+    document.getElementById('prodId').value = product ? product.id : '';
+    document.getElementById('prodCategory').value = product ? product.category : 'burger';
+    document.getElementById('prodName').value = product ? product.name : '';
+    document.getElementById('prodDesc').value = product ? (product.description || '') : '';
+    document.getElementById('prodPrice').value = product ? product.price : '';
+    document.getElementById('prodTag').value = product ? (product.tag || '') : '';
+    document.getElementById('prodImage').value = product ? (product.image_file || '') : '';
+    document.getElementById('prodFeatured').checked = product ? !!product.featured : false;
+    document.getElementById('prodActive').checked = product ? !!product.active : true;
+    productModal.classList.add('show');
+  }
+  document.getElementById('newProductBtn').onclick = ()=> openProductModal(null);
+  document.getElementById('cancelModalBtn').onclick = ()=> productModal.classList.remove('show');
+  productModal.addEventListener('click', e=>{ if(e.target === productModal) productModal.classList.remove('show'); });
+
+  document.getElementById('saveProductBtn').onclick = async ()=>{
+    const id = document.getElementById('prodId').value;
+    const payload = {
+      category: document.getElementById('prodCategory').value,
+      name: document.getElementById('prodName').value.trim(),
+      description: document.getElementById('prodDesc').value.trim(),
+      price: Number(document.getElementById('prodPrice').value) || 0,
+      tag: document.getElementById('prodTag').value.trim(),
+      image_file: document.getElementById('prodImage').value.trim(),
+      featured: document.getElementById('prodFeatured').checked,
+      active: document.getElementById('prodActive').checked,
+    };
+    if(!payload.name){ alert('Falta el nombre del producto.'); return; }
+
+    const { error } = id
+      ? await sb.from('products').update(payload).eq('id', id)
+      : await sb.from('products').insert(payload);
+
+    if(error){ alert('No se pudo guardar: ' + error.message); return; }
+    productModal.classList.remove('show');
+    toast('Producto guardado ✓');
+    loadProducts();
+  };
+
+  async function deleteProduct(id){
+    if(!confirm('¿Eliminar este producto? No se puede deshacer.')) return;
+    const { error } = await sb.from('products').delete().eq('id', id);
+    if(error){ alert('No se pudo eliminar: ' + error.message); return; }
+    toast('Producto eliminado');
+    loadProducts();
+  }
+
+  /* ---------- PEDIDOS ---------- */
+  async function loadOrders(){
+    const { data, error } = await sb.from('orders').select('*').order('created_at', { ascending:false }).limit(100);
+    if(error){ console.error(error); return; }
+    renderOrders(data || []);
+  }
+
+  function renderOrders(orders){
+    const el = document.getElementById('tbodyOrders');
+    if(orders.length === 0){
+      el.innerHTML = `<tr class="empty-row"><td colspan="6">Todavía no llegó ningún pedido.</td></tr>`;
+      return;
+    }
+    el.innerHTML = orders.map(o=>{
+      const fecha = new Date(o.created_at).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+      const entrega = o.delivery_mode === 'envio' ? `Envío: ${o.address || '—'}` : 'Retiro en el local';
+      return `
+        <tr>
+          <td>${fecha}</td>
+          <td><strong>${o.customer_name}</strong><div class="muted">${o.customer_phone}</div></td>
+          <td>${entrega}</td>
+          <td>${fmt(o.total)}</td>
+          <td>
+            <select class="field" style="padding:6px 8px; font-size:.78rem; width:auto;" data-status="${o.id}">
+              ${['nuevo','en preparación','listo','entregado'].map(s=> `<option value="${s}" ${o.status===s?'selected':''}>${s}</option>`).join('')}
+            </select>
+          </td>
+          <td class="muted">${(o.items||[]).map(i=> `${i.qty}x ${i.name}`).join(', ')}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('tbodyOrders').addEventListener('change', async (e)=>{
+    const sel = e.target.closest('[data-status]');
+    if(!sel) return;
+    const { error } = await sb.from('orders').update({ status: sel.value }).eq('id', sel.dataset.status);
+    if(error){ alert('No se pudo actualizar: ' + error.message); return; }
+    toast('Estado actualizado');
+  });
+
+  document.getElementById('refreshOrdersBtn').onclick = loadOrders;
+
+  /* ---------- HORARIO Y CONTACTO ---------- */
+  async function loadConfig(){
+    const { data, error } = await sb.from('settings').select('*');
+    if(error){ console.error(error); return; }
+    const map = {};
+    (data || []).forEach(row=> map[row.key] = row.value);
+    document.getElementById('cfgOpen').value = minutesToTime(map.store_open_min ?? 1140);
+    document.getElementById('cfgClose').value = minutesToTime(map.store_close_min ?? 1410);
+    document.getElementById('cfgWhatsapp').value = map.whatsapp_number || '';
+    document.getElementById('cfgInstagram').value = map.instagram_url || '';
+  }
+
+  document.getElementById('saveConfigBtn').onclick = async ()=>{
+    const rows = [
+      { key:'store_open_min', value:String(timeToMinutes(document.getElementById('cfgOpen').value)) },
+      { key:'store_close_min', value:String(timeToMinutes(document.getElementById('cfgClose').value)) },
+      { key:'whatsapp_number', value:document.getElementById('cfgWhatsapp').value.trim() },
+      { key:'instagram_url', value:document.getElementById('cfgInstagram').value.trim() },
+    ];
+    const { error } = await sb.from('settings').upsert(rows, { onConflict:'key' });
+    if(error){ alert('No se pudo guardar: ' + error.message); return; }
+    toast('Configuración guardada ✓');
+  };
+
+  checkSession();
+}
+</script>
+</body>
+</html>
