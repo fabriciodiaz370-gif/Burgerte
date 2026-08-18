@@ -46,6 +46,19 @@
 <title>Obsidiana Burgers | Hamburguesas artesanales</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- ===================== CONFIGURACIÓN DE SUPABASE (opcional) =====================
+     Esta web funciona perfecto tal cual, con el menú y el horario que ya están
+     escritos más abajo en este archivo. Si en algún momento conectás el panel
+     de admin (admin.html), pegá acá la misma URL y anon key que usaste ahí, y el
+     menú, el horario y el WhatsApp se van a leer solos desde Supabase — no hace
+     falta cambiar nada más en este archivo. Mientras diga "PEGAR-ACA", la web
+     sigue usando el menú de ejemplo de siempre. -->
+<script>
+  const SUPABASE_URL = 'PEGAR-ACA-TU-PROJECT-URL';
+  const SUPABASE_ANON_KEY = 'PEGAR-ACA-TU-ANON-KEY';
+  const SUPABASE_CONFIGURED = SUPABASE_URL !== 'PEGAR-ACA-TU-PROJECT-URL' && SUPABASE_ANON_KEY !== 'PEGAR-ACA-TU-ANON-KEY' && SUPABASE_URL && SUPABASE_ANON_KEY;
+</script>
 <style>
   :root{
     --black:#0a0a0a;
@@ -377,11 +390,12 @@
   .qty-control span{min-width:16px; text-align:center; font-size:.85rem;}
   .ci-remove{justify-self:end; align-self:start; color:var(--gray); font-size:1.1rem;}
   .ci-remove:hover{color:var(--gold);}
-  .cart-footer{padding:22px 26px 28px; border-top:1px solid rgba(212,175,55,.18);}
+  .cart-footer{padding:16px 26px 18px; border-top:1px solid rgba(212,175,55,.18);}
   .cart-sub-row{display:flex; justify-content:space-between; margin-bottom:6px; font-size:.9rem; color:var(--gray);}
-  .cart-total-row{display:flex; justify-content:space-between; align-items:baseline; margin:14px 0 20px;}
-  .cart-total-row .price{font-size:1.7rem;}
-  .cart-note{font-size:.72rem; color:var(--gray); text-align:center; margin-top:12px;}
+  .cart-total-row{display:flex; justify-content:space-between; align-items:baseline; margin:0 0 12px;}
+  .cart-total-row .price{font-size:1.35rem;}
+  .btn-whatsapp.btn-block{padding:13px 24px; font-size:.9rem;}
+  .cart-note{font-size:.66rem; color:var(--gray); text-align:center; margin-top:8px;}
 
   /* ---------- Carrito: scroll wrapper, upsell, formulario ---------- */
   .cart-scroll{flex:1; overflow-y:auto;}
@@ -613,9 +627,9 @@
         </div>
         <p style="max-width:280px;">Hamburguesas artesanales a la parrilla, con ingredientes premium y el toque dorado que nos distingue.</p>
         <div class="social-row">
-          <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg></a>
+          <a href="#" id="igLinkFooter" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg></a>
           <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
-          <a href="#" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></a>
+          <a href="#" id="waLinkFooter" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></a>
         </div>
       </div>
       <div>
@@ -710,9 +724,6 @@
 
   <div class="cart-footer" id="cartFooter">
     <div class="cart-total-row"><span>Total</span><span class="price gold-text" id="cartTotal">AR$ 0</span></div>
-    <div class="closed-notice" id="closedNotice" style="display:none;">
-      🌙 Ahora mismo estamos cerrados. Podés mandar el pedido igual: lo vemos ni bien abramos (<span id="closedNoticeTime">hoy a las 19:00</span>).
-    </div>
     <button class="btn btn-whatsapp btn-block" id="checkoutBtn" type="button">Confirmar pedido · <span id="checkoutTotal">AR$ 0</span></button>
     <p class="cart-note">Se manda por WhatsApp — ahí coordinamos el pago y la entrega.</p>
   </div>
@@ -722,7 +733,7 @@
 
 <script>
 /* ============ DATA ============ */
-const burgers = [
+let burgers = [
   { id:'classic-onix', name:'Classic Onix', desc:'Carne 180g, cheddar, lechuga, tomate, cebolla morada y salsa especial.', price:8500, tag:'Clásica', file:'burger-classic-onix.jpg' },
   { id:'golden-bbq', name:'Golden BBQ', desc:'Carne 180g, panceta crocante, cheddar, cebolla caramelizada y BBQ dorada.', price:9800, tag:'Ahumada', file:'burger-golden-bbq.jpg' },
   { id:'black-truffle', name:'Black Truffle', desc:'Carne 200g, queso brie, rúcula y mayonesa de trufa negra.', price:12500, tag:'Premium', file:'burger-black-truffle.jpg' },
@@ -732,9 +743,9 @@ const burgers = [
   { id:'blue-gold', name:'Blue Gold', desc:'Carne 180g, queso azul, cebolla crispy y reducción de miel.', price:10500, tag:'Intensa', file:'burger-blue-gold.jpg' },
   { id:'fuego-negro', name:'Fuego Negro', desc:'Carne 180g, jalapeños, pepper jack y salsa chipotle picante.', price:9900, tag:'Picante', file:'burger-fuego-negro.jpg' },
 ];
-const featuredIds = ['classic-onix','golden-bbq','black-truffle','doble-onix','fuego-negro'];
+let featuredIds = ['classic-onix','golden-bbq','black-truffle','doble-onix','fuego-negro'];
 
-const combos = [
+let combos = [
   { id:'combo-classic', name:'Combo Classic Onix', desc:'Classic Onix + papas fritas + bebida a elección.', price:11500, tag:'Combo', file:'combo-classic-onix.jpg' },
   { id:'combo-golden', name:'Combo Golden BBQ', desc:'Golden BBQ + papas fritas + bebida a elección.', price:12800, tag:'Combo', file:'combo-golden-bbq.jpg' },
   { id:'combo-doble', name:'Combo Doble Onix', desc:'Doble Onix + papas grandes + bebida a elección.', price:14500, tag:'Combo', file:'combo-doble-onix.jpg' },
@@ -743,7 +754,7 @@ const combos = [
   { id:'combo-veggie', name:'Combo Vegetariana Obsidiana', desc:'Vegetariana Obsidiana + papas fritas + bebida a elección.', price:11900, tag:'Combo', file:'combo-veggie-obsidiana.jpg' },
 ];
 
-const drinks = [
+let drinks = [
   { id:'drink-coca', name:'Coca-Cola 500ml', desc:'Bien fría, la clásica de siempre.', price:2200, tag:'Gaseosa', file:'drink-coca-cola.jpg' },
   { id:'drink-sprite', name:'Sprite 500ml', desc:'Lima-limón bien helada.', price:2200, tag:'Gaseosa', file:'drink-sprite.jpg' },
   { id:'drink-agua', name:'Agua Mineral 500ml', desc:'Con gas o sin gas, a elección.', price:1500, tag:'Agua', file:'drink-agua.jpg' },
@@ -764,13 +775,38 @@ function mediaHTML(file, alt, small){
     </div>`;
 }
 
-/* ============ RENDER: CAROUSEL ============ */
+/* ============ RENDER: CAROUSEL / CATÁLOGO / COMBOS / BEBIDAS ============ */
+/* Estas cuatro funciones se llaman una vez con el menú de ejemplo de acá abajo,
+   y se vuelven a llamar solas si Supabase trae datos (ver SUPABASE SYNC más abajo). */
 const carouselTrack = document.getElementById('carouselTrack');
-carouselTrack.innerHTML = featuredIds.map(id=>{
-  const b = burgers.find(x=>x.id===id);
-  return `
-    <div class="burger-card" style="position:relative;">
-      <span class="peek-tag">${b.tag}</span>
+const catalogGrid = document.getElementById('catalogGrid');
+const combosGrid = document.getElementById('combosGrid');
+const drinksGrid = document.getElementById('drinksGrid');
+
+function renderCarousel(){
+  const ids = featuredIds.length ? featuredIds : burgers.slice(0,5).map(b=>b.id);
+  carouselTrack.innerHTML = ids.map(id=>{
+    const b = burgers.find(x=>x.id===id);
+    if(!b) return '';
+    return `
+      <div class="burger-card" style="position:relative;">
+        <span class="peek-tag">${b.tag}</span>
+        <div class="media">${mediaHTML(b.file, b.name)}</div>
+        <div class="card-body">
+          <h3>${b.name}</h3>
+          <p class="desc">${b.desc}</p>
+          <div class="price-row">
+            <span class="price">${fmt(b.price)}</span>
+            <button class="btn btn-primary btn-sm" data-add="${b.id}">Agregar</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderCatalog(){
+  catalogGrid.innerHTML = burgers.map(b=>`
+    <div class="burger-card">
       <div class="media">${mediaHTML(b.file, b.name)}</div>
       <div class="card-body">
         <h3>${b.name}</h3>
@@ -780,58 +816,48 @@ carouselTrack.innerHTML = featuredIds.map(id=>{
           <button class="btn btn-primary btn-sm" data-add="${b.id}">Agregar</button>
         </div>
       </div>
-    </div>`;
-}).join('');
+    </div>`).join('');
+}
+
+function renderCombosGrid(){
+  combosGrid.innerHTML = combos.map(c=>`
+    <div class="burger-card" style="position:relative;">
+      <span class="peek-tag">${c.tag}</span>
+      <div class="media">${mediaHTML(c.file, c.name)}</div>
+      <div class="card-body">
+        <h3>${c.name}</h3>
+        <p class="desc">${c.desc}</p>
+        <div class="price-row">
+          <span class="price">${fmt(c.price)}</span>
+          <button class="btn btn-primary btn-sm" data-add="${c.id}">Agregar</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderDrinksGrid(){
+  drinksGrid.innerHTML = drinks.map(d=>`
+    <div class="burger-card" style="position:relative;">
+      <span class="peek-tag">${d.tag}</span>
+      <div class="media">${mediaHTML(d.file, d.name)}</div>
+      <div class="card-body">
+        <h3>${d.name}</h3>
+        <p class="desc">${d.desc}</p>
+        <div class="price-row">
+          <span class="price">${fmt(d.price)}</span>
+          <button class="btn btn-primary btn-sm" data-add="${d.id}">Agregar</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+renderCarousel();
+renderCatalog();
+renderCombosGrid();
+renderDrinksGrid();
 
 document.getElementById('carPrev').onclick = ()=> carouselTrack.scrollBy({left:-300, behavior:'smooth'});
 document.getElementById('carNext').onclick = ()=> carouselTrack.scrollBy({left:300, behavior:'smooth'});
-
-/* ============ RENDER: CATÁLOGO ============ */
-const catalogGrid = document.getElementById('catalogGrid');
-catalogGrid.innerHTML = burgers.map(b=>`
-  <div class="burger-card">
-    <div class="media">${mediaHTML(b.file, b.name)}</div>
-    <div class="card-body">
-      <h3>${b.name}</h3>
-      <p class="desc">${b.desc}</p>
-      <div class="price-row">
-        <span class="price">${fmt(b.price)}</span>
-        <button class="btn btn-primary btn-sm" data-add="${b.id}">Agregar</button>
-      </div>
-    </div>
-  </div>`).join('');
-
-/* ============ RENDER: COMBOS ============ */
-const combosGrid = document.getElementById('combosGrid');
-combosGrid.innerHTML = combos.map(c=>`
-  <div class="burger-card" style="position:relative;">
-    <span class="peek-tag">${c.tag}</span>
-    <div class="media">${mediaHTML(c.file, c.name)}</div>
-    <div class="card-body">
-      <h3>${c.name}</h3>
-      <p class="desc">${c.desc}</p>
-      <div class="price-row">
-        <span class="price">${fmt(c.price)}</span>
-        <button class="btn btn-primary btn-sm" data-add="${c.id}">Agregar</button>
-      </div>
-    </div>
-  </div>`).join('');
-
-/* ============ RENDER: BEBIDAS ============ */
-const drinksGrid = document.getElementById('drinksGrid');
-drinksGrid.innerHTML = drinks.map(d=>`
-  <div class="burger-card" style="position:relative;">
-    <span class="peek-tag">${d.tag}</span>
-    <div class="media">${mediaHTML(d.file, d.name)}</div>
-    <div class="card-body">
-      <h3>${d.name}</h3>
-      <p class="desc">${d.desc}</p>
-      <div class="price-row">
-        <span class="price">${fmt(d.price)}</span>
-        <button class="btn btn-primary btn-sm" data-add="${d.id}">Agregar</button>
-      </div>
-    </div>
-  </div>`).join('');
 
 /* ============ CART LOGIC (en memoria, sin localStorage) ============ */
 let cart = [];
@@ -931,9 +957,10 @@ overlay.onclick = closeCart;
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape') closeCart(); });
 
 /* ============ ESTADO DEL LOCAL (abierto / cerrado) ============ */
-/* Horario: todos los días de 19:00 a 23:30. Para cambiarlo, ajustá estos dos valores (en minutos). */
-const STORE_OPEN_MIN = 19 * 60;
-const STORE_CLOSE_MIN = 23 * 60 + 30;
+/* Horario: todos los días de 19:00 a 23:30. Para cambiarlo, ajustá estos dos valores (en minutos),
+   o cargalo desde el panel de admin una vez que conectes Supabase (ver SUPABASE SYNC más abajo). */
+let STORE_OPEN_MIN = 19 * 60;
+let STORE_CLOSE_MIN = 23 * 60 + 30;
 
 function isStoreOpenNow(){
   const now = new Date();
@@ -989,7 +1016,7 @@ deliveryEnvio.onclick = ()=>{
 };
 
 /* ============ ENVIAR PEDIDO POR WHATSAPP ============ */
-const WHATSAPP_NUMBER = '5492657392878';
+let WHATSAPP_NUMBER = '5492657392878';
 
 document.getElementById('checkoutBtn').onclick = ()=>{
   if(cart.length === 0){ showToast('Tu carrito está vacío.'); return; }
@@ -1021,6 +1048,21 @@ document.getElementById('checkoutBtn').onclick = ()=>{
 
   const text = encodeURIComponent(lines.join('\n'));
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${text}`, '_blank');
+
+  // Si Supabase está conectado, además guardamos el pedido para que aparezca
+  // en el panel de admin. Si falla o no está conectado, no pasa nada — el
+  // pedido ya se mandó por WhatsApp igual, que es lo que importa.
+  if(SUPABASE_CONFIGURED && sbClient){
+    sbClient.from('orders').insert({
+      customer_name: name,
+      customer_phone: phone,
+      delivery_mode: deliveryMode,
+      address: deliveryMode === 'envio' ? address : '',
+      notes,
+      items: cart.map(i=> ({ name:i.name, qty:i.qty, price:i.price })),
+      total: subtotal,
+    }).then(({error})=>{ if(error) console.warn('No se pudo guardar el pedido en Supabase:', error.message); });
+  }
 };
 
 /* ============ TOAST ============ */
@@ -1050,6 +1092,62 @@ document.addEventListener('click', ()=> devCreditMenu.classList.remove('open'));
 devCreditMenu.addEventListener('click', e=> e.stopPropagation());
 
 renderCart();
+
+/* ============ SUPABASE SYNC (opcional — ver panel de admin.html) ============
+   Si conectaste Supabase (pegaste tu URL y anon key arriba, en el <head>),
+   acá abajo se busca el menú, el horario y los datos de contacto reales.
+   Si algo falla o todavía no lo conectaste, la web sigue funcionando con
+   el menú de ejemplo de siempre — nunca se rompe por esto. */
+let sbClient = null;
+
+async function syncWithSupabase(){
+  if(!SUPABASE_CONFIGURED) return;
+  try{
+    sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const [{ data: products, error: prodErr }, { data: settings, error: setErr }] = await Promise.all([
+      sbClient.from('products').select('*').eq('active', true).order('sort_order', { ascending:true }),
+      sbClient.from('settings').select('*'),
+    ]);
+
+    if(!prodErr && products && products.length){
+      const mapped = products.map(p=> ({
+        id:p.id, name:p.name, desc:p.description || '', price:Number(p.price) || 0,
+        tag:p.tag || '', file:p.image_file || '', featured:!!p.featured, category:p.category,
+      }));
+      const newBurgers = mapped.filter(p=> p.category === 'burger');
+      const newCombos = mapped.filter(p=> p.category === 'combo');
+      const newDrinks = mapped.filter(p=> p.category === 'drink');
+      if(newBurgers.length){
+        burgers = newBurgers;
+        featuredIds = newBurgers.filter(b=> b.featured).map(b=> b.id);
+      }
+      if(newCombos.length) combos = newCombos;
+      if(newDrinks.length) drinks = newDrinks;
+      renderCarousel();
+      renderCatalog();
+      renderCombosGrid();
+      renderDrinksGrid();
+    }
+
+    if(!setErr && settings && settings.length){
+      const map = {};
+      settings.forEach(row=> map[row.key] = row.value);
+      if(map.store_open_min) STORE_OPEN_MIN = parseInt(map.store_open_min, 10);
+      if(map.store_close_min) STORE_CLOSE_MIN = parseInt(map.store_close_min, 10);
+      if(map.whatsapp_number) WHATSAPP_NUMBER = map.whatsapp_number;
+      updateStoreStatus();
+
+      const igLink = document.getElementById('igLinkFooter');
+      if(igLink && map.instagram_url) igLink.href = map.instagram_url;
+      const waLink = document.getElementById('waLinkFooter');
+      if(waLink && map.whatsapp_number) waLink.href = `https://wa.me/${map.whatsapp_number}`;
+    }
+  } catch(err){
+    console.warn('No se pudo sincronizar con Supabase, sigo con el menú de ejemplo.', err);
+  }
+}
+syncWithSupabase();
 </script>
 </body>
 </html>
