@@ -194,7 +194,7 @@
       linear-gradient(160deg, var(--black-3), var(--black));
     display:flex; align-items:center; justify-content:center;
   }
-  .media img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
+  .media img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; box-sizing:border-box; padding:10px;}
   .media .ph{
     position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:7px;
     color:var(--gold); opacity:.75; text-align:center; padding:10px;
@@ -968,12 +968,18 @@ const ITEMS = {};
 const fmt = n => 'AR$ ' + n.toLocaleString('es-AR');
 
 function mediaHTML(file, alt, small){
-  return `
-    <img src="${file}" alt="${alt}" onerror="this.style.display='none'">
+  /* El placeholder ("Foto próximamente") sólo se muestra si todavía no hay
+     archivo cargado, o si la imagen no llegó a cargar (404). En cuanto la
+     foto real carga bien, el placeholder se oculta solo. */
+  const placeholder = `
     <div class="ph">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.5 9.2C4.5 5.5 7.9 2.5 12 2.5s7.5 3 7.5 6.7a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1Z"/><rect x="3" y="11.3" width="18" height="2.2" rx="1.1"/><rect x="3.4" y="15.4" width="17.2" height="3.4" rx="1.7"/><circle cx="8" cy="6.6" r=".9" opacity=".6"/><circle cx="12" cy="5.3" r=".9" opacity=".6"/><circle cx="16" cy="6.6" r=".9" opacity=".6"/></svg>
       ${small !== false ? `<span class="ph-label">Foto próximamente</span><small>${file}</small>` : ''}
     </div>`;
+  if(!file) return placeholder;
+  return `
+    <img src="${file}" alt="${alt}" onload="this.nextElementSibling.style.display='none'" onerror="this.style.display='none'">
+    ${placeholder}`;
 }
 
 /* ============ ESTADO DEL BUILDER ============ */
