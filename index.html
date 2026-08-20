@@ -3,29 +3,15 @@
   OBSIDIANA BURGERS — Landing page
   ============================================================
   CÓMO AGREGAR TUS FOTOS REALES
-  La foto del banner ya está incrustada directamente en el CSS (no hace
-  falta carpeta "images" para ella). Para el resto de las fotos (catálogo,
-  combos), creá una carpeta "images" al lado de este archivo .html y
-  guardá tus fotos con estos nombres exactos (cualquier .jpg o
-  .png funciona, se detectan solas apenas existan):
+  La foto del banner y el logo ya están incrustados directamente en el CSS
+  (no dependen de ningún archivo aparte). Para las fotos de productos
+  (catálogo, combos, bebidas), subí las imágenes SUELTAS, al lado de este
+  archivo .html (sin carpeta "images"), y en el campo "Imagen" de cada
+  producto (panel de admin) poné el nombre exacto del archivo que subiste,
+  por ejemplo: burger-classic-onix.jpg, 1.png, foto-golden-bbq.jpg, etc.
+  Cualquier .jpg o .png funciona, se detectan solas apenas existan.
 
-    images/burger-classic-onix.jpg
-    images/burger-golden-bbq.jpg
-    images/burger-black-truffle.jpg
-    images/burger-doble-onix.jpg
-    images/burger-reina-dorada.jpg
-    images/burger-veggie-obsidiana.jpg
-    images/burger-blue-gold.jpg
-    images/burger-fuego-negro.jpg
-    images/combo-classic-onix.jpg
-    images/combo-golden-bbq.jpg
-    images/combo-doble-onix.jpg
-    images/combo-fuego-negro.jpg
-    images/combo-reina-dorada.jpg
-    images/combo-veggie-obsidiana.jpg
-    images/logo.png                 -> opcional, si no existe se usa el logo de texto + ícono
-
-  Hasta que subas las fotos, se muestra un placeholder dorado
+  Hasta que subas la foto de un producto, se muestra un placeholder dorado
   con el nombre del archivo esperado, así sabés dónde va cada una.
 
   FONDO DE PANTALLA
@@ -750,7 +736,7 @@ const fmt = n => 'AR$ ' + n.toLocaleString('es-AR');
 
 function mediaHTML(file, alt, small){
   return `
-    <img src="images/${file}" alt="${alt}" onerror="this.style.display='none'">
+    <img src="${file}" alt="${alt}" onerror="this.style.display='none'">
     <div class="ph">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.5 9.2C4.5 5.5 7.9 2.5 12 2.5s7.5 3 7.5 6.7a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1Z"/><rect x="3" y="11.3" width="18" height="2.2" rx="1.1"/><rect x="3.4" y="15.4" width="17.2" height="3.4" rx="1.7"/><circle cx="8" cy="6.6" r=".9" opacity=".6"/><circle cx="12" cy="5.3" r=".9" opacity=".6"/><circle cx="16" cy="6.6" r=".9" opacity=".6"/></svg>
       ${small !== false ? `<span class="ph-label">Foto próximamente</span><small>${file}</small>` : ''}
@@ -833,10 +819,23 @@ function renderDrinksGrid(){
     </div>`).join('');
 }
 
-renderCarousel();
-renderCatalog();
-renderCombosGrid();
-renderDrinksGrid();
+/* Si Supabase está conectado, no mostramos el menú de ejemplo ni por un
+   instante: se ve un "Cargando…" hasta que syncWithSupabase() trae los
+   productos reales y los pinta una sola vez (evita el "flash" de ver
+   primero el menú de ejemplo y después el real). Si no está conectado,
+   se pinta el menú de ejemplo de una y listo. */
+const loadingHTML = '<p style="grid-column:1/-1;width:100%;text-align:center;color:var(--gray);padding:40px 0;">Cargando menú…</p>';
+if(SUPABASE_CONFIGURED){
+  carouselTrack.innerHTML = loadingHTML;
+  catalogGrid.innerHTML = loadingHTML;
+  combosGrid.innerHTML = loadingHTML;
+  drinksGrid.innerHTML = loadingHTML;
+} else {
+  renderCarousel();
+  renderCatalog();
+  renderCombosGrid();
+  renderDrinksGrid();
+}
 
 document.getElementById('carPrev').onclick = ()=> { carouselTrack.scrollBy({left:-300, behavior:'smooth'}); restartCarouselAutoplay(); };
 document.getElementById('carNext').onclick = ()=> { carouselTrack.scrollBy({left:300, behavior:'smooth'}); restartCarouselAutoplay(); };
@@ -1130,11 +1129,16 @@ async function syncWithSupabase(){
       }
       if(newCombos.length) combos = newCombos;
       if(newDrinks.length) drinks = newDrinks;
-      renderCarousel();
-      renderCatalog();
-      renderCombosGrid();
-      renderDrinksGrid();
     }
+
+    /* Pintamos siempre acá, una sola vez: con los productos reales si
+       llegaron, o con el menú de ejemplo si Supabase todavía no tiene
+       productos cargados. Así nunca se ve el menú de ejemplo y después
+       cambia solo — se pinta una vez y ya. */
+    renderCarousel();
+    renderCatalog();
+    renderCombosGrid();
+    renderDrinksGrid();
 
     if(!setErr && settings && settings.length){
       const map = {};
@@ -1151,6 +1155,10 @@ async function syncWithSupabase(){
     }
   } catch(err){
     console.warn('No se pudo sincronizar con Supabase, sigo con el menú de ejemplo.', err);
+    renderCarousel();
+    renderCatalog();
+    renderCombosGrid();
+    renderDrinksGrid();
   }
 }
 syncWithSupabase();
