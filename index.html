@@ -253,15 +253,6 @@
   .section-head p{color:var(--gray); margin-top:14px;}
   .block-alt{background:rgba(19,19,19,.45); border-top:1px solid rgba(212,175,55,.1); border-bottom:1px solid rgba(212,175,55,.1);}
 
-  /* ---------- Recuadro dorado del catálogo ---------- */
-  .catalog-frame{
-    border:1.5px solid rgba(212,175,55,.5);
-    border-radius:calc(var(--radius) + 8px);
-    padding:52px 40px 48px;
-    background:rgba(10,10,10,.3);
-    box-shadow:var(--shadow-gold), inset 0 0 0 1px rgba(212,175,55,.08);
-  }
-
   /* ---------- Carousel ---------- */
   .carousel-wrap{position:relative; margin-top:-34px;}
   .carousel-track{
@@ -485,7 +476,6 @@
   @media (max-width:600px){
     .catalog-grid{grid-template-columns:1fr;}
     .cart-drawer{width:100%;}
-    .catalog-frame{padding:36px 18px 30px;}
   }
   @media (max-width:430px){
     .store-status .status-text{display:none;}
@@ -582,14 +572,12 @@
 <!-- ===================== CATÁLOGO COMPLETO ===================== -->
 <section class="block" id="catalogo">
   <div class="container">
-    <div class="catalog-frame">
-      <div class="section-head">
-        <span class="eyebrow" style="justify-content:center;">Menú completo</span>
-        <h2>Catálogo de Hamburguesas</h2>
-        <p>Todas nuestras recetas, con ingredientes y precio. Elegí, agregá al carrito y listo.</p>
-      </div>
-      <div class="catalog-grid" id="catalogGrid"></div>
+    <div class="section-head">
+      <span class="eyebrow" style="justify-content:center;">Menú completo</span>
+      <h2>Catálogo de Hamburguesas</h2>
+      <p>Todas nuestras recetas, con ingredientes y precio. Elegí, agregá al carrito y listo.</p>
     </div>
+    <div class="catalog-grid" id="catalogGrid"></div>
   </div>
 </section>
 
